@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Learning Progress Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --bg-card: #ffffff;
+    --ink: #1a1612;
+    --ink-soft: #5c5347;
+    --accent: #c2410c;
+    --accent-soft: #fed7aa;
+    --line: #e8e2d6;
+    --good: #65a30d;
+    --warn: #ca8a04;
+    --info: #0369a1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 24px;
+    line-height: 1.5;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(194, 65, 12, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(3, 105, 161, 0.03) 0%, transparent 50%);
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: clamp(36px, 6vw, 56px);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 16px;
+  }
+  h1 em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  
+  .section {
+    margin-bottom: 48px;
+  }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-left: auto;
+  }
+  
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 28px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  
+  .chart-wrap {
+    position: relative;
+    height: 320px;
+  }
+  
+  /* Score Input Table */
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .score-table th {
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 500;
+  }
+  .score-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .score-table tr:last-child td { border-bottom: none; }
+  .skill-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .score-input {
+    width: 60px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    text-align: center;
+    background: var(--bg);
+    transition: border-color 0.2s;
+  }
+  .score-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg-card);
+  }
+  .score-input.before {
+    background: #faf7f2;
+    color: var(--ink-soft);
+  }
+  .delta {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+  .delta.positive { color: var(--good); }
+  .delta.zero { color: var(--ink-soft); }
+  .delta.negative { color: var(--accent); }
+  
+  /* KPI Progress Bars */
+  .kpi-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .kpi-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .kpi-label {
+    font-size: 14px;
+  }
+  .kpi-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .kpi-input {
+    width: 50px;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+    background: var(--bg);
+  }
+  .kpi-bar-wrap {
+    grid-column: 1 / -1;
+    position: relative;
+    height: 6px;
+    background: var(--line);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .kpi-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #ea580c);
+    border-radius: 100px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+  }
+  .kpi-bar.complete {
+    background: linear-gradient(90deg, var(--good), #84cc16);
+  }
+  .kpi-percent {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 500;
+    min-width: 40px;
+    text-align: right;
+  }
+  .kpi-percent.complete { color: var(--good); }
+  
+  /* Time Tracking */
+  .time-input-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .time-input-row.header {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .time-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .time-input {
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+    background: var(--bg);
+    width: 100%;
+  }
+  
+  /* Pull Quote */
+  .pull-quote {
+    margin: 56px 0;
+    padding: 32px;
+    text-align: center;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .pull-quote blockquote {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1.4;
+    max-width: 700px;
+    margin: 0 auto;
+    color: var(--ink);
+  }
+  .pull-quote cite {
+    display: block;
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-style: normal;
+  }
+  
+  .save-bar {
+    position: sticky;
+    bottom: 16px;
+    margin-top: 32px;
+    text-align: center;
+  }
+  .save-btn {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 12px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .save-btn:hover {
+    background: var(--accent);
+    transform: translateY(-1px);
+  }
+  .save-status {
+    display: inline-block;
+    margin-left: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--good);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .save-status.visible { opacity: 1; }
+  
+  footer {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="eyebrow">Versant Progress Tracker · 2026</div>
+  <h1>From <em>B1</em> to <em>B2</em><br>in Three Months</h1>
+  <div class="meta">May 1 — July 31, 2026  ·  Goal: GSE 45 → 65</div>
+</header>
+
+<!-- 1. Before/After Score Comparison -->
+<section class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">Score Comparison</span>
+    <span class="section-subtitle">Before / After / Goal</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <table class="score-table">
+        <thead>
+          <tr><th>Skill</th><th>Before</th><th>Goal</th><th>After</th><th>Δ</th></tr>
+        </thead>
+        <tbody id="scoreTable">
+          <tr data-skill="overall">
+            <td class="skill-name">Overall</td>
+            <td><input type="number" class="score-input before" data-key="overall_before" value="45"></td>
+            <td><input type="number" class="score-input" data-key="overall_goal" value="65"></td>
+            <td><input type="number" class="score-input" data-key="overall_after" placeholder="—"></td>
+            <td class="delta" data-delta="overall">—</td>
+          </tr>
+          <tr data-skill="speaking">
+            <td class="skill-name">Speaking</td>
+            <td><input type="number" class="score-input before" data-key="speaking_before" value="43"></td>
+            <td><input type="number" class="score-input" data-key="speaking_goal" value="60"></td>
+            <td><input type="number" class="score-input" data-key="speaking_after" placeholder="—"></td>
+            <td class="delta" data-delta="speaking">—</td>
+          </tr>
+          <tr data-skill="listening">
+            <td class="skill-name">Listening</td>
+            <td><input type="number" class="score-input before" data-key="listening_before" value="41"></td>
+            <td><input type="number" class="score-input" data-key="listening_goal" value="60"></td>
+            <td><input type="number" class="score-input" data-key="listening_after" placeholder="—"></td>
+            <td class="delta" data-delta="listening">—</td>
+          </tr>
+          <tr data-skill="writing">
+            <td class="skill-name">Writing</td>
+            <td><input type="number" class="score-input before" data-key="writing_before" value="48"></td>
+            <td><input type="number" class="score-input" data-key="writing_goal" value="65"></td>
+            <td><input type="number" class="score-input" data-key="writing_after" placeholder="—"></td>
+            <td class="delta" data-delta="writing">—</td>
+          </tr>
+          <tr data-skill="reading">
+            <td class="skill-name">Reading</td>
+            <td><input type="number" class="score-input before" data-key="reading_before" value="46"></td>
+            <td><input type="number" class="score-input" data-key="reading_goal" value="65"></td>
+            <td><input type="number" class="score-input" data-key="reading_after" placeholder="—"></td>
+            <td class="delta" data-delta="reading">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Radar Chart -->
+<section class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">Skill Balance</span>
+    <span class="section-subtitle">4-skill radar comparison</span>
+  </div>
+  <div class="card">
+    <div class="chart-wrap" style="height: 400px;"><canvas id="radarChart"></canvas></div>
+  </div>
+</section>
+
+<!-- 3. Weekly Time Tracking -->
+<section class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <span class="section-title">Study Time</span>
+    <span class="section-subtitle">Weekly hours · Goal: 13.5 hrs/week</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="time-input-row header">
+        <div>Week</div>
+        <div>Weekday</div>
+        <div>Weekend</div>
+        <div>Total</div>
+      </div>
+      <div id="timeInputs"></div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="timeChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. KPI Progress -->
+<section class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <span class="section-title">Monthly KPIs</span>
+    <span class="section-subtitle">Achievement tracker</span>
+  </div>
+  
+  <div class="card" style="margin-bottom: 16px;">
+    <h3 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 16px;">Month 1 — May (耳を作り直す)</h3>
+    <div class="kpi-list" id="kpiMonth1"></div>
+  </div>
+  
+  <div class="card" style="margin-bottom: 16px;">
+    <h3 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 16px;">Month 2 — June (アウトプット爆増)</h3>
+    <div class="kpi-list" id="kpiMonth2"></div>
+  </div>
+  
+  <div class="card">
+    <h3 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 16px;">Month 3 — July (B2レベルへ仕上げ)</h3>
+    <div class="kpi-list" id="kpiMonth3"></div>
+  </div>
+</section>
+
+<div class="pull-quote">
+  <blockquote>"具体的であれ抽象的なテーマであれ、アイデアや意見を述べ、複雑な論旨を提示したり、答えることができる"</blockquote>
+  <cite>— Versant B2 / Upper-intermediate level+</cite>
+</div>
+
+<div class="save-bar">
+  <button class="save-btn" onclick="saveAll()">💾 Save Progress</button>
+  <span class="save-status" id="saveStatus">Saved to browser</span>
+</div>
+
+<footer>
+  Data is saved locally in your browser · Refresh anytime to see your charts update
+</footer>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'english_dashboard_v1';
+
+// ===== KPI Definitions =====
+const kpiDefs = {
+  month1: [
+    { id: 'm1_bbc', label: 'BBC 6 Min English 字幕なし理解度', target: 80, unit: '%' },
+    { id: 'm1_speak', label: '5分間、原稿なしで1日を英語で話せる', target: 100, unit: '%' },
+    { id: 'm1_typing', label: 'タイピング速度', target: 45, unit: 'wpm' },
+    { id: 'm1_shadow', label: 'シャドーイング実施日数', target: 25, unit: '日' },
+    { id: 'm1_hours', label: '総学習時間', target: 54, unit: 'h' },
+  ],
+  month2: [
+    { id: 'm2_ted', label: 'TED Talks 字幕なし理解度', target: 70, unit: '%' },
+    { id: 'm2_lesson', label: 'オンライン英会話実施回数', target: 25, unit: '回' },
+    { id: 'm2_speech', label: '5分英語スピーチ流暢度（達成日数）', target: 100, unit: '%' },
+    { id: 'm2_essay', label: '200語エッセイ作成回数', target: 8, unit: '本' },
+    { id: 'm2_hours', label: '総学習時間', target: 54, unit: 'h' },
+  ],
+  month3: [
+    { id: 'm3_interview', label: '模擬面接（英語のみ）実施回数', target: 8, unit: '回' },
+    { id: 'm3_abstract', label: '抽象的トピックで5分話せる（達成日数）', target: 100, unit: '%' },
+    { id: 'm3_essay', label: '300-500語エッセイ作成回数', target: 12, unit: '本' },
+    { id: 'm3_versant', label: 'Versant再受験', target: 1, unit: '回' },
+    { id: 'm3_hours', label: '総学習時間', target: 54, unit: 'h' },
+  ],
+};
+
+// ===== Load saved state =====
+let state = {};
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) state = JSON.parse(saved);
+} catch(e) { state = {}; }
+
+// ===== Score Inputs =====
+function initScores() {
+  document.querySelectorAll('.score-input').forEach(input => {
+    const key = input.dataset.key;
+    if (state[key] !== undefined) input.value = state[key];
+    input.addEventListener('input', () => {
+      state[key] = input.value;
+      updateDeltas();
+      updateBarChart();
+      updateRadarChart();
+    });
+  });
+  updateDeltas();
+}
+
+function updateDeltas() {
+  ['overall', 'speaking', 'listening', 'writing', 'reading'].forEach(skill => {
+    const before = parseFloat(state[skill+'_before']) || parseFloat(document.querySelector(`[data-key="${skill}_before"]`).value) || 0;
+    const after = parseFloat(state[skill+'_after']) || parseFloat(document.querySelector(`[data-key="${skill}_after"]`).value);
+    const cell = document.querySelector(`[data-delta="${skill}"]`);
+    if (!isNaN(after)) {
+      const delta = after - before;
+      cell.textContent = (delta >= 0 ? '+' : '') + delta;
+      cell.className = 'delta ' + (delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'zero');
+    } else {
+      cell.textContent = '—';
+      cell.className = 'delta zero';
+    }
+  });
+}
+
+// ===== Bar Chart =====
+let barChart, radarChart, timeChart;
+
+function getScoreVals() {
+  const skills = ['speaking', 'listening', 'writing', 'reading'];
+  const before = skills.map(s => parseFloat(state[s+'_before']) || parseFloat(document.querySelector(`[data-key="${s}_before"]`).value) || 0);
+  const goal = skills.map(s => parseFloat(state[s+'_goal']) || parseFloat(document.querySelector(`[data-key="${s}_goal"]`).value) || 0);
+  const after = skills.map(s => parseFloat(state[s+'_after']) || parseFloat(document.querySelector(`[data-key="${s}_after"]`).value) || null);
+  return { before, goal, after };
+}
+
+function initBarChart() {
+  const { before, goal, after } = getScoreVals();
+  const ctx = document.getElementById('barChart').getContext('2d');
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Speaking', 'Listening', 'Writing', 'Reading'],
+      datasets: [
+        { label: 'Before', data: before, backgroundColor: '#d4cfc2', borderRadius: 2 },
+        { label: 'Goal', data: goal, backgroundColor: '#fed7aa', borderRadius: 2 },
+        { label: 'After', data: after, backgroundColor: '#c2410c', borderRadius: 2 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Mono', size: 11 }, color: '#5c5347' } },
+        tooltip: { titleFont: { family: 'DM Sans' }, bodyFont: { family: 'DM Mono' } }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 90, grid: { color: '#e8e2d6' }, ticks: { font: { family: 'DM Mono', size: 10 }, color: '#5c5347' } },
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#1a1612' } }
+      }
+    }
+  });
+}
+
+function updateBarChart() {
+  const { before, goal, after } = getScoreVals();
+  barChart.data.datasets[0].data = before;
+  barChart.data.datasets[1].data = goal;
+  barChart.data.datasets[2].data = after;
+  barChart.update();
+}
+
+// ===== Radar Chart =====
+function initRadarChart() {
+  const { before, goal, after } = getScoreVals();
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Speaking', 'Listening', 'Writing', 'Reading'],
+      datasets: [
+        { label: 'Before', data: before, borderColor: '#a8a094', backgroundColor: 'rgba(168, 160, 148, 0.15)', borderWidth: 2, pointBackgroundColor: '#a8a094' },
+        { label: 'Goal', data: goal, borderColor: '#fed7aa', backgroundColor: 'rgba(254, 215, 170, 0.2)', borderWidth: 2, borderDash: [5,5], pointBackgroundColor: '#fed7aa' },
+        { label: 'After', data: after, borderColor: '#c2410c', backgroundColor: 'rgba(194, 65, 12, 0.2)', borderWidth: 2.5, pointBackgroundColor: '#c2410c' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Mono', size: 11 }, color: '#5c5347' } }
+      },
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 90,
+          grid: { color: '#e8e2d6' },
+          angleLines: { color: '#e8e2d6' },
+          pointLabels: { font: { family: 'DM Sans', size: 13, weight: '500' }, color: '#1a1612' },
+          ticks: { font: { family: 'DM Mono', size: 9 }, color: '#5c5347', backdropColor: 'transparent' }
+        }
+      }
+    }
+  });
+}
+
+function updateRadarChart() {
+  const { before, goal, after } = getScoreVals();
+  radarChart.data.datasets[0].data = before;
+  radarChart.data.datasets[1].data = goal;
+  radarChart.data.datasets[2].data = after;
+  radarChart.update();
+}
+
+// ===== Weekly Time Tracking =====
+function initTimeInputs() {
+  const container = document.getElementById('timeInputs');
+  for (let w = 1; w <= 13; w++) {
+    const row = document.createElement('div');
+    row.className = 'time-input-row';
+    row.innerHTML = `
+      <div class="time-label">Week ${w}</div>
+      <input type="number" step="0.5" class="time-input" data-key="w${w}_weekday" placeholder="0">
+      <input type="number" step="0.5" class="time-input" data-key="w${w}_weekend" placeholder="0">
+      <div class="time-label" id="w${w}_total" style="text-align:center;">—</div>
+    `;
+    container.appendChild(row);
+  }
+  document.querySelectorAll('.time-input').forEach(input => {
+    const key = input.dataset.key;
+    if (state[key] !== undefined) input.value = state[key];
+    input.addEventListener('input', () => {
+      state[key] = input.value;
+      updateTimeChart();
+    });
+  });
+  updateTimeTotals();
+}
+
+function updateTimeTotals() {
+  for (let w = 1; w <= 13; w++) {
+    const wd = parseFloat(state[`w${w}_weekday`]) || parseFloat(document.querySelector(`[data-key="w${w}_weekday"]`)?.value) || 0;
+    const we = parseFloat(state[`w${w}_weekend`]) || parseFloat(document.querySelector(`[data-key="w${w}_weekend"]`)?.value) || 0;
+    const total = wd + we;
+    const el = document.getElementById(`w${w}_total`);
+    if (el) el.textContent = total > 0 ? total.toFixed(1) + 'h' : '—';
+  }
+}
+
+function getTimeData() {
+  const totals = [];
+  for (let w = 1; w <= 13; w++) {
+    const wd = parseFloat(state[`w${w}_weekday`]) || 0;
+    const we = parseFloat(state[`w${w}_weekend`]) || 0;
+    totals.push(wd + we || null);
+  }
+  return totals;
+}
+
+function initTimeChart() {
+  const ctx = document.getElementById('timeChart').getContext('2d');
+  timeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array.from({length: 13}, (_, i) => `W${i+1}`),
+      datasets: [
+        { label: 'Actual', data: getTimeData(), borderColor: '#c2410c', backgroundColor: 'rgba(194, 65, 12, 0.1)', borderWidth: 2.5, tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#c2410c', spanGaps: true },
+        { label: 'Goal (13.5h)', data: Array(13).fill(13.5), borderColor: '#a8a094', borderWidth: 1.5, borderDash: [4,4], pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Mono', size: 11 }, color: '#5c5347' } }
+      },
+      scales: {
+        y: { beginAtZero: true, suggestedMax: 20, grid: { color: '#e8e2d6' }, ticks: { font: { family: 'DM Mono', size: 10 }, color: '#5c5347', callback: (v) => v + 'h' } },
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 10 }, color: '#5c5347' } }
+      }
+    }
+  });
+}
+
+function updateTimeChart() {
+  updateTimeTotals();
+  timeChart.data.datasets[0].data = getTimeData();
+  timeChart.update();
+}
+
+// ===== KPI Progress Bars =====
+function renderKPIs(monthKey, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  kpiDefs[monthKey].forEach(kpi => {
+    const current = parseFloat(state[kpi.id]) || 0;
+    const pct = Math.min(100, (current / kpi.target) * 100);
+    const isComplete = pct >= 100;
+    
+    const item = document.createElement('div');
+    item.className = 'kpi-item';
+    item.innerHTML = `
+      <div class="kpi-label">${kpi.label}</div>
+      <div class="kpi-input-wrap">
+        <input type="number" class="kpi-input" data-kpi="${kpi.id}" value="${state[kpi.id] || ''}" placeholder="0">
+        <span>/ ${kpi.target} ${kpi.unit}</span>
+      </div>
+      <div class="kpi-percent ${isComplete ? 'complete' : ''}">${Math.round(pct)}%</div>
+      <div class="kpi-bar-wrap">
+        <div class="kpi-bar ${isComplete ? 'complete' : ''}" style="width: ${pct}%"></div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+  
+  container.querySelectorAll('.kpi-input').forEach(input => {
+    input.addEventListener('input', () => {
+      state[input.dataset.kpi] = input.value;
+      renderKPIs(monthKey, containerId);
+    });
+  });
+}
+
+// ===== Save =====
+function saveAll() {
+  // Capture all current input values
+  document.querySelectorAll('input').forEach(input => {
+    const key = input.dataset.key || input.dataset.kpi;
+    if (key) state[key] = input.value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const status = document.getElementById('saveStatus');
+  status.classList.add('visible');
+  setTimeout(() => status.classList.remove('visible'), 2000);
+}
+
+// Auto-save every 5 seconds if there are unsaved changes
+setInterval(() => {
+  document.querySelectorAll('input').forEach(input => {
+    const key = input.dataset.key || input.dataset.kpi;
+    if (key && input.value !== '') state[key] = input.value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}, 5000);
+
+// ===== Init =====
+window.addEventListener('DOMContentLoaded', () => {
+  initScores();
+  initBarChart();
+  initRadarChart();
+  initTimeInputs();
+  initTimeChart();
+  renderKPIs('month1', 'kpiMonth1');
+  renderKPIs('month2', 'kpiMonth2');
+  renderKPIs('month3', 'kpiMonth3');
+});
+</script>
+</body>
+</html>
